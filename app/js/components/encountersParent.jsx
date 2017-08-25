@@ -10,7 +10,7 @@
 import React from 'react';
 import { Button, Form, FormGroup, Label, Input, FormText } from 'reactstrap';
 import apiCall from '../utilities/apiHelper';
-import { Providers, Observations } from './encounterObservations';
+import { EncounterDetails, Providers, Observations } from './encounterObservations';
 
 export default class Encounters extends React.Component {
   constructor(props) {
@@ -43,6 +43,7 @@ export default class Encounters extends React.Component {
   componentDidMount() {
     apiCall(null, 'get', `encounter/${this.state.encounterUuid}?v=full`)
       .then((res) => {
+        console.log("results", res);
         this.setState({
           patientName: res.patient.display, location: res.location.display,
           encounterType: res.encounterType.display, observations: res.obs, visit: res.visit.display,
