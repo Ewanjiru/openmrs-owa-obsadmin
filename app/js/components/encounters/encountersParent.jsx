@@ -9,8 +9,9 @@
 
 import React from 'react';
 import { Button, Form, FormGroup, Label, Input, FormText } from 'reactstrap';
-import apiCall from '../utilities/apiHelper';
-import { EncounterDetails, Providers, Observations } from './encounterObservations';
+import apiCall from '../../utilities/apiHelper';
+import Providers from './encounterProviders';
+import Observations from './encounterObservations';
 
 export default class Encounters extends React.Component {
   constructor(props) {
@@ -63,13 +64,14 @@ export default class Encounters extends React.Component {
     this.props.router.push("/");
   }
   render() {
+    console.log('observation state', this.state.observations)
     return (
       <div>
         <div className="section top">
           <div className="col-sm-12 section search">
             <span onClick={this.goHome} className="glyphicon glyphicon-home glyphicon-updated breadcrumb-item"
               aria-hidden="true">Back</span>
-            <header className="patient-header">
+            <header className="encounter-header">
               Encounter {this.state.encounterUuid}
             </header>
             <div className="display">
@@ -194,7 +196,14 @@ export default class Encounters extends React.Component {
                 </form>
               </div>
               <Providers providers={this.state.providers} />
-              <Observations observations={this.state.observations} />
+              {this.state.observations.length > 0 &&
+                this.state.observations.map((ob, index) => {
+                  if (ob.groupMembers) {
+                    return (<Observations key={index} observations={ob.groupMembers} />
+                    )
+                  }
+                })
+              }
             </div>
           </div>
         </div>

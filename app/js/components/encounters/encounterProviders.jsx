@@ -14,7 +14,7 @@ const Providers = (props) => {
     <div className="observation">
       <header className="encounter-header">
         Provider
-                </header>
+      </header>
       <table className="table table-striped">
         <thead>
           <tr>
@@ -37,34 +37,4 @@ const Providers = (props) => {
   )
 }
 
-const Observations = (props) => {
-  return (
-    <div className="observation">
-      <header className="encounter-header">
-        Observations
-                </header>
-      <table className="table table-striped">
-        <thead>
-          <tr>
-            <th>Question Concept</th>
-            <th>Value</th>
-            <th>Created</th>
-            <th>Deleted</th>
-          </tr>
-        </thead>
-        <tbody>
-          {props.observations.map((observation) => (
-            <tr>
-              <td>{observation.concept.display}</td>
-              <td>{observation.value}</td>
-              <td>{new Date(observation.obsDatetime).toString()}</td>
-              <td>{(observation.voided) ? 'Deleted' : 'Not Deleted'}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  )
-}
-
-export { Providers, Observations };
+export default Providers;
