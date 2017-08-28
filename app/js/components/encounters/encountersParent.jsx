@@ -8,206 +8,224 @@
  */
 
 import React from 'react';
-import { Button, Form, FormGroup, Label, Input, FormText } from 'reactstrap';
 import apiCall from '../../utilities/apiHelper';
 import Providers from './encounterProviders';
-import Observations from './encounterObservations';
+import Encounter from './encounterForm';
 
 export default class Encounters extends React.Component {
   constructor(props) {
     super(props);
+    console.log('this props', props);
     this.state = {
-      encounterUuid: '92e9f325-277e-47b0-9110-716d1ddf1b54',
+      encounterUuid: props.params.encounterId,
+      patientUuid: props.params.patentId,
       encounterDisplay: '',
       observations: [],
       providers: [],
       location_array: [],
+      visit_array: [],
       patientName: '',
       location: '',
-      encounterDatetime: '',
       visit: '',
       encounterType: '',
       form: '',
       creator: '',
       voided: '',
-      dateCreated: '',
+      encounterDatetime: '',
       changedBy: '',
       dateChanged: '',
-    }
+      editable: false,
+      toDelete: false,
+      voidReason: '',
+    };
     this.goHome = this.goHome.bind(this);
+    this.fetchData = this.fetchData.bind(this);
+    this.handleEdit = this.handleEdit.bind(this);
+    this.handleUpdate = this.handleUpdate.bind(this);
+    this.handleChange = this.handleChange.bind(this);
+    this.handleDelete = this.handleDelete.bind(this);
   }
-
-  componentWillReceiveProps() {
-
-  }
-
   componentDidMount() {
-    apiCall(null, 'get', `encounter/${this.state.encounterUuid}?v=full`)
-      .then((res) => {
-        console.log("results", res);
-        this.setState({
-          patientName: res.patient.display, location: res.location.display,
-          encounterType: res.encounterType.display, observations: res.obs, visit: res.visit.display,
-          creator: res.auditInfo.creator.display, dateCreated: res.auditInfo.dateCreated,
-          changedBy: res.auditInfo.changedBy.display, dateChanged: res.auditInfo.dateChanged,
-          providers: res.encounterProviders
-        })
-      })
-    apiCall(null, 'get', 'location')
-      .then(res => {
-        this.setState(Object.assign({}, this.state, {
-          location_array: res.results
-        }))
-      })
+    this.fetchData(this.state.encounterUuid);
   }
+
+  componentWillReceiveProps(nextProps) {
+    if (this.state.encounterUuid !== this.props.encounterUuid) {
+      this.setState({
+        encounterUuid: nextProps.params.encounterId,
+      });
+    }
+  }
+
+  fetchData(id) {
+    apiCall(null, 'get', `encounter/${id}?v=full`)
+      .then((res) => {
+        console.log('results', res);
+        this.setState({
+          patientName: res.patient.display,
+          location: res.location.display,
+          encounterType: res.encounterType.display,
+          observations: res.obs,
+          visit: res.visit.display,
+          form: res.form.display,
+          creator: res.auditInfo.creator.display,
+          encounterDatetime: res.encounterDatetime,
+          changedBy: res.auditInfo.changedBy,
+          dateChanged: res.auditInfo.dateChanged,
+          providers: res.encounterProviders,
+          voided: res.voided,
+        });
+      })
+      .catch(error => console.log('error fetch', error));
+    apiCall(null, 'get', `visit?patient=${this.state.patientUuid}`)
+      .then((res) => {
+        this.setState({
+          visit_array: res.results,
+        });
+      });
+    apiCall(null, 'get', 'location')
+      .then((res) => {
+        this.setState(Object.assign({}, this.state, {
+          location_array: res.results,
+        }));
+      });
+  }
+
+  handleChange(event) {
+    const { name, value } = event.target;
+    this.setState({
+      [name]: value,
+    });
+  }
+
+  handleEdit(event) {
+    event.preventDefault();
+    this.setState({
+      editable: true,
+    });
+  }
+
+  handleUpdate() {
+    const { patientName, location, visit, encounterDatetime, voided } = this.state;
+    console.log(patientName, location, visit, encounterDatetime, voided);
+    apiCall({
+      patient: patientName,
+      location,
+      encounterDatetime,
+    }, 'post', `encounter/${this.state.encounterUuid}`)
+      .then((res) => {
+        toastr.success('successfully updated');
+
+        console.log('edit results', res);
+      })
+      .catch(error => console.log('res error', error));
+    this.setState({
+      editable: false,
+    });
+  }
+
+  handleDelete(e) {
+    e.preventDefault();
+    if (!this.state.toDelete) {
+      this.setState({
+        toDelete: true,
+      });
+    } else {
+      apiCall(null, 'delete', `encounter/${this.state.encounterUuid}`)
+        .then((res) => {
+          apiCall({ auditInfo: { voidReason: this.state.voidReason } }, 'post', `encounter/${this.state.encounterUuid}`)
+            .then((response) => {
+              console.log('I got an error when deleting', response);
+            })
+            .catch(error => console.log('error inner', error));
+        })
+        .catch(error => console.log('I got an error when deleting', error));
+    }
+  }
+
   goHome() {
-    this.props.router.push("/");
+    this.props.router.push('/');
   }
   render() {
-    console.log('observation state', this.state.observations)
     return (
       <div>
         <div className="section top">
           <div className="col-sm-12 section search">
-            <span onClick={this.goHome} className="glyphicon glyphicon-home glyphicon-updated breadcrumb-item"
-              aria-hidden="true">Back</span>
+            <span
+              onClick={this.goHome}
+              className="glyphicon glyphicon-home glyphicon-updated breadcrumb-item"
+              aria-hidden="true"
+            >Back</span>
             <header className="encounter-header">
               Encounter {this.state.encounterUuid}
             </header>
             <div className="display">
-              <div className="encounter">
-                <form className="encounter-form">
-                  <div className="form-group row">
-                    <label className="col-sm-4 col-form-label"> Patient  </label>
-                    <div className="col-sm-6">
-                      <input className="form-control"
-                        name="patient"
-                        type="text"
-                        value={this.state.patientName}
-                        readOnly={this.state.display === 'view' ? 'readonly' : null}
-                        required
-                        disabled />
-                    </div>
-                  </div>
+              <Encounter
+                location_array={this.state.location_array}
+                location={this.state.location}
+                patientName={this.state.patientName}
+                encounterDatetime={this.state.encounterDatetime}
+                visit={this.state.visit}
+                visit_array={this.state.visit_array}
+                encounterType={this.state.encounterType}
+                creator={this.state.creator}
+                voided={this.state.voided}
+                form={this.state.form}
+                voidReason={this.state.voidReason}
+                editable={this.state.editable}
+                toDelete={this.state.toDelete}
+                handleEdit={this.handleEdit}
+                handleCancel={this.handleCancel}
+                handleUpdate={this.handleUpdate}
+                handleChange={this.handleChange}
+                handleDelete={this.handleDelete}
+              />
 
-                  <div className="form-group row">
-                    <label className="col-sm-4 col-form-label">Location </label>
-                    <div className="col-sm-6">
-                      <select className="form-control"
-                        name="location"
-                        value={this.state.location}
-                        readOnly={this.state.display === 'view' ? 'readonly' : null}
-                        disabled>
-                        {
-                          this.state.location_array.map((location, key) => (
-                            <option value={location.display}>{location.display}</option>
-                          ))
-                        }
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="form-group row">
-                    <label className="col-sm-4 col-form-label"> Encounter Date </label>
-                    <div className="col-sm-6">
-                      <input className="form-control"
-                        name="encounterDate"
-                        type="text"
-                        value={new Date(this.state.dateCreated).toString()}
-                        readOnly={this.state.display === 'view' ? 'readonly' : null}
-                        required
-                        disabled />
-                    </div>
-                  </div>
-
-                  <div className="form-group row">
-                    <label className="col-sm-4 col-form-label">Visit</label>
-                    <div className="col-sm-6">
-                      <input className="form-control"
-                        name="visit"
-                        type="text"
-                        value={this.state.visit}
-                        disabled />
-                    </div>
-                  </div>
-
-                  <div className="form-group row">
-                    <label className="col-sm-4 col-form-label">Encounter Type</label>
-                    <div className="col-sm-6">
-                      <input className="form-control"
-                        name="createdby"
-                        type="text"
-                        value={this.state.encounterType}
-                        disabled />
-                    </div>
-                  </div>
-
-                  <div className="form-group row">
-                    <label className="col-sm-4 col-form-label">Form</label>
-                    <div className="col-sm-6">
-                      <input className="form-control"
-                        name="createdby"
-                        type="text"
-                        value={this.state.form}
-                        disabled />
-                    </div>
-                  </div>
-
-                  <div className="form-group row">
-                    <label className="col-sm-4 col-form-label">Created By:</label>
-                    <div className="col-sm-6">
-                      <input className="form-control"
-                        name="createdby"
-                        type="text"
-                        value={this.state.creator}
-                        disabled />
-                    </div>
-                  </div>
-
-                  <div className="form-group row">
-                    <label className="col-sm-4 col-form-label">Deleted</label>
-                    <div className="col-sm-6">
-                      <input
-                        class="form-check-input"
-                        type="checkbox"
-                        checked={this.state.voided}
-                        disabled />
-                    </div>
-                  </div>
-
-                  <div className="form-group row">
-                    <div className="col-sm-2">
-                      <button type="submit"
-                        name="update"
-                        onClick={this.handleEdit}
-                        disabled={this.state.display === 'view' ? 'disabled' : null}
-                        className="btn btn-default form-control">
-                        Edit</button>
-                    </div>
-                    <div className="col-sm-2">
-                      <button type="button"
-                        name="cancel"
-                        onClick={this.handleCancel}
-                        disabled={this.state.display === 'view' ? 'disabled' : null}
-                        className="btn btn-default form-control cancelBtn">
-                        Cancel</button>
-                    </div>
-                  </div>
-                </form>
-              </div>
               <Providers providers={this.state.providers} />
-              {this.state.observations.length > 0 &&
-                this.state.observations.map((ob, index) => {
-                  if (ob.groupMembers) {
-                    return (<Observations key={index} observations={ob.groupMembers} />
-                    )
-                  }
-                })
-              }
+
+              <div className="observation">
+                <h3>Observations</h3>
+                <table className="table table-striped">
+                  <thead>
+                    <tr>
+                      <th>Question Concept</th>
+                      <th>Value</th>
+                      <th>Created</th>
+                      <th>Deleted</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {this.state.observations.length > 0 &&
+                      this.state.observations.map((ob) => {
+                        if (ob.groupMembers !== null) {
+                          return (
+                            (ob.groupMembers.map((observation, index) => (
+                              <tr key={index}>
+                                <td>{observation.concept.display}</td>
+                                <td>{observation.value.display}</td>
+                                <td>{new Date(observation.obsDatetime).toString()}</td>
+                                <td>{(observation.voided) ? 'Deleted' : 'Not Deleted'}</td>
+                              </tr>
+                            )))
+                          );
+                        }
+                        return (
+                          <tr>
+                            <td>{ob.concept.display}</td>
+                            <td>{ob.value}</td>
+                            <td>{new Date(ob.obsDatetime).toString()}</td>
+                            <td>{(ob.voided) ? 'Deleted' : 'Not Deleted'}</td>
+                          </tr>
+                        );
+                      })
+                    }
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </div>
       </div>
-    )
+    );
   }
 }

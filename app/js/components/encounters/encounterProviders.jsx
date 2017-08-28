@@ -11,10 +11,8 @@ import React from 'react';
 
 const Providers = (props) => {
   return (
-    <div className="observation">
-      <header className="encounter-header">
-        Provider
-      </header>
+    <div className="provider">
+      <h3>Providers</h3>
       <table className="table table-striped">
         <thead>
           <tr>
@@ -24,17 +22,17 @@ const Providers = (props) => {
           </tr>
         </thead>
         <tbody>
-          {props.providers.map((provider) => (
-            <tr>
-              <td>{provider.role}</td>
-              <td>{observation.display}</td>
-              <td>{provider.identifier}</td>
+          {props.providers.map((provider, index) => (
+            <tr key={index}>
+              <td>{provider.encounterRole.display}</td>
+              <td>{provider.provider.display.split('-')[1]}</td>
+              <td>{provider.provider.display.split('-')[0]}</td>
             </tr>
           ))}
         </tbody>
       </table>
     </div>
-  )
-}
+  );
+};
 
 export default Providers;
