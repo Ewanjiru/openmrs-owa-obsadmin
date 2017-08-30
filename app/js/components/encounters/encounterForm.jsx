@@ -80,7 +80,7 @@ const Encounter = props => (
             name="encounterType"
             type="text"
             value={props.encounterType}
-            disabled={(props.editable === false)}
+            disabled
             onChange={props.handleChange}
           />
         </div>
@@ -94,7 +94,7 @@ const Encounter = props => (
             name="form"
             type="text"
             value={props.form}
-            disabled={(props.editable === false)}
+            disabled
             onChange={props.handleChange}
           />
         </div>
@@ -108,7 +108,7 @@ const Encounter = props => (
             name="creator"
             type="text"
             value={props.creator}
-            disabled={(props.editable === false)}
+            disabled
             onChange={props.handleChange}
           />
         </div>
@@ -122,7 +122,7 @@ const Encounter = props => (
             className="form-check-input"
             type="checkbox"
             checked={props.voided}
-            disabled={(props.editable === false)}
+            disabled
             onChange={props.handleChange}
           />
         </div>
@@ -157,10 +157,10 @@ const Encounter = props => (
           <button
             type="button"
             name="cancel"
-            onClick={(props.editable) ? props.handleCancel : props.handleDelete}
+            onClick={(props.editable) ? props.handleCancel : (props.voided) ? props.handleUndelete : props.handleDelete}
             className="btn btn-default form-control cancelBtn"
           >
-            {(props.editable) ? 'Cancel' : 'Delete'}</button>
+            {(props.editable || props.voided) ? 'Cancel' : 'Delete'}</button>
         </div>
       </div>
     </form>

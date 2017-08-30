@@ -307,14 +307,11 @@ a {
 }
 .encounter{
     margin-bottom: 10px;
-    border: 1px solid black;
 }
 .observation{
-    border: 1px solid black;
 }
 .provider{
     margin-bottom: 10px;
-    border: 1px solid #363463;
 }
 .encounter-header {
     text-align: center;
