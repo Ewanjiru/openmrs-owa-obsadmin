@@ -1,4 +1,5 @@
 import React from 'react';
+import DateTimeField from 'react-bootstrap-datetimepicker';
 
 const Encounter = props => (
   <div className="encounter">
@@ -19,7 +20,12 @@ const Encounter = props => (
             <div className="dropdown-menu" id="selectedPatient">
               {
                 props.searchedPatients.map((patient, index) => (
-                  <li className="dropdown-item" value={patient.uuid} key={index} onClick={() => props.changeVisits(patient.uuid, patient.display)}>{patient.display}</li>
+                  <li
+                    className="dropdown-item"
+                    value={patient.uuid}
+                    key={index}
+                    onClick={() => props.changeVisits(patient.uuid, patient.display)}
+                  >{patient.display}</li>
                 ))
               }
             </div>
@@ -49,14 +55,14 @@ const Encounter = props => (
       <div className="form-group row">
         <label className="col-sm-4 col-form-label"> Encounter Date </label>
         <div className="col-sm-6">
-          <input
+          <DateTimeField
             className="form-control"
             name="encounterDatetime"
-            type="text"
-            value={new Date(props.encounterDatetime).toString()}
-            required
+            format={props.format}
+            inputFormat={props.inputFormat}
+            dateTime={props.encounterDatetime}
             disabled={(props.editable === false)}
-            onChange={props.handleChange}
+            onChange={props.handleTimeChange("encounterDatetime")}
           />
         </div>
       </div>
@@ -152,23 +158,26 @@ const Encounter = props => (
           </div>
         </div>
       }
-      <div className="form-group row">
-        <div className="col-sm-2">
+      <div id="button" className="form-group row">
+        <div className="col-sm-3">
           <button
             type="submit"
             name="update"
             onClick={(props.editable) ? e => props.handleUpdate(e) : props.handleEdit}
-            className="btn btn-default form-control"
+            className="btn btn-success form-control"
           >
             {(props.editable) ? 'Update' : 'Edit'}</button>
         </div>
 
-        <div className="col-sm-2">
+        <div id="button" className="col-sm-3">
           <button
             type="button"
             name="cancel"
-            onClick={(props.editable) ? props.handleCancel : (props.voided) ? props.handleUndelete : props.handleDelete}
-            className="btn btn-default form-control cancelBtn"
+            onClick={
+              (props.editable) ? props.handleCancel
+                : (props.voided) ? props.handleUndelete
+                  : props.handleDelete}
+            className="btn btn-danger form-control cancelBtn"
           >
             {(props.editable || props.voided) ? 'Cancel' : 'Delete'}</button>
         </div>
