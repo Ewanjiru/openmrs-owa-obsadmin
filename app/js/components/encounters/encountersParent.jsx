@@ -26,11 +26,16 @@ export default class Encounters extends React.Component {
       visit_array: [],
       encounterRoles: [],
       createProvidersArray: [],
+      orders: [],
       patientName: '',
       location: '',
-      visit: '',
+      locationUuid: '',
+      visit: null,
+      visitUuid: '',
       encounterType: '',
-      form: '',
+      encounterTypeUuid: '',
+      form: null,
+      formUuid: null,
       creator: '',
       voided: '',
       encounterDatetime: '',
@@ -43,6 +48,13 @@ export default class Encounters extends React.Component {
       encounterRole: '',
       providerName: '',
       voidReason: '',
+      searchedPatients: [],
+      prevPatient: '',
+      newPatientUuid: '',
+      searchValue: '',
+      obsUuid: [],
+      providersUuid: [],
+
     };
     this.goHome = this.goHome.bind(this);
     this.fetchData = this.fetchData.bind(this);
@@ -55,6 +67,9 @@ export default class Encounters extends React.Component {
     this.handleProviderChecked = this.handleProviderChecked.bind(this);
     this.removeProvider = this.removeProvider.bind(this);
     this.saveNewProvider = this.saveNewProvider.bind(this);
+    this.handleSearchPatient = this.handleSearchPatient.bind(this);
+    this.changeVisits = this.changeVisits.bind(this);
+    this.handleCreateNewEncounter = this.handleCreateNewEncounter.bind(this);
   }
 
   componentDidMount() {
@@ -75,17 +90,21 @@ export default class Encounters extends React.Component {
         console.log('results', res);
         this.setState({
           patientName: res.patient.display,
-          location: res.location.display,
+          location: res.location.uuid,
           encounterType: res.encounterType.display,
+          encounterTypeUuid: res.encounterType.uuid,
           observations: res.obs,
-          visit: res.visit.display,
-          form: (res.form !== null) ? res.form.display : res.form,
+          visit: res.visit.uuid,
+          form: res.form && res.form.display,
+          formUuid: res.form && res.form.uuid,
           creator: res.auditInfo.creator.display,
           encounterDatetime: res.encounterDatetime,
           changedBy: res.auditInfo.changedBy,
           dateChanged: res.auditInfo.dateChanged,
           providers: res.encounterProviders,
           voided: res.voided,
+          orders: res.orders,
+
         });
       })
       .catch(error => console.log('error fetch', error));
@@ -129,32 +148,93 @@ export default class Encounters extends React.Component {
     console.log('this logs', value);
   }
 
+  handleSearchPatient(e) {
+    const searchValue = e.target.value.toLowerCase();
+    this.setState({ patientName: searchValue, searchValue });
+    apiCall(null, 'get', `patient?q=${searchValue}`)
+      .then((response) => {
+        console.log('this is the response', response);
+        this.setState({ searchedPatients: response.results });
+      });
+  }
+
+  changeVisits(newPatientUuid, patientname) {
+    $('#selectedPatient').hide();
+    apiCall(null, 'get', `visit?patient=${newPatientUuid}`)
+      .then((res) => {
+        this.setState(Object.assign({}, this.state.newPatientUuid, this.state.patientName, this.state.visit_array, {
+          newPatientUuid,
+          visit_array: res.results,
+          patientName: patientname.split('-')[1],
+          visit: null,
+        }));
+      });
+  }
+
   handleEdit(event) {
     event.preventDefault();
     this.setState({
       editable: true,
+      prevPatient: this.state.patientName,
     });
   }
 
-  handleUpdate() {
-    const { patientName, location, visit, encounterDatetime, voided } = this.state;
-    console.log(patientName, location, visit, encounterDatetime, voided);
-    apiCall({
-      patient: patientName,
-      location,
-      encounterDatetime,
-    }, 'post', `encounter/${this.state.encounterUuid}`)
-      .then((res) => {
-        console.log('edit results', res);
-      })
-      .catch(error => console.log('res error', error));
+  handleUpdate(event) {
+    event.preventDefault();
+    console.log('prevname', this.state.prevPatient, 'new name', this.state.patientName);
+    // window.alert('put whatever');
+
+    if (this.state.prevPatient === this.state.patientName) {
+      const { patientName, prevPatient, location, visit, encounterDatetime } = this.state;
+      apiCall({
+        location,
+        encounterDatetime,
+      }, 'post', `encounter/${this.state.encounterUuid}`)
+        .then((res) => {
+          console.log('edit results', res);
+        })
+        .catch(error => console.log('res error', error));
+      this.setState({
+        editable: false,
+      });
+    } else {
+      this.setState({
+        toDelete: true,
+        voidReason: `moved to patient${this.state.patientName}`,
+      }, () => {
+        this.handleDelete();
+        this.handleCreateNewEncounter();
+      });
+    }
+  }
+
+  handleCreateNewEncounter() {
+    const obsUuids = this.state.observations.map(obs => ({ uuid: obs.uuid }));
+    const providersUuids = this.state.observations.map(provider => ({ uuid: provider.uuid }));
     this.setState({
-      editable: false,
+      obsUuid: obsUuids,
+      providersUuid: providersUuids,
     });
+    const { obsUuid, providersUuid, form, newPatientUuid, encounterDatetime, visit, encounterTypeUuid } = this.state;
+    apiCall({
+      obs: obsUuid,
+      encounterProviders: providersUuid,
+      form,
+      patient: newPatientUuid,
+      encounterDatetime,
+      visit,
+      encounterType: encounterTypeUuid,
+    }, 'post', 'encounter')
+      .then((response) => {
+        console.log('response create is', response);
+      })
+      .catch((error) => {
+        console.log(error);
+      });
   }
 
-  handleDelete(e) {
-    e.preventDefault();
+  handleDelete() {
+    // window.alert(`to delete ${this.state.toDelete} void reason ${this.state.voidReason}`);
     if (!this.state.toDelete) {
       this.setState({
         toDelete: true,
@@ -164,16 +244,17 @@ export default class Encounters extends React.Component {
         .then((res) => {
           apiCall({ auditInfo: { voidReason: this.state.voidReason } }, 'post', `encounter/${this.state.encounterUuid}`)
             .then((response) => {
+              // window.alert('put whatever');
               console.log('I got an error when deleting', response);
             })
-            .catch(error => console.log('error inner', error));
+            .catch((error) => { console.log('error inner', error); });
         })
-        .catch(error => console.log('I got an error when deleting', error));
+        .catch((error) => { console.log('error inner', error); });
     }
+    // window.alert(`to delete ${this.state.toDelete} void reason ${this.state.voidReason}`);
   }
 
-  handleUndelete(e) {
-    e.preventDefault();
+  handleUndelete() {
     apiCall({ voided: false }, 'post', `encounter/${this.state.encounterUuid}`)
       .then((res) => {
         apiCall({ obs: { voided: false } }, 'post', `encounter/${this.state.encounterUuid}`);
@@ -182,7 +263,7 @@ export default class Encounters extends React.Component {
 
   handleObservationClick(observationUuid) {
     this.props.router.push(
-      `/patient/${this.state.patientUuid}/encounter/${this.state.encounterUuid}/observation/${observationUuid}
+      `/patient/${this.state.patientUuid}/encounter/${this.state.encounterUuid}/obs/${observationUuid}
       `);
   }
 
@@ -219,7 +300,7 @@ export default class Encounters extends React.Component {
     this.props.router.push('/');
   }
   render() {
-    console.log('this logs', this.state.encounterRole, this.state.providerName);
+    console.log('these state', this.state);
     return (
       <div>
         <div className="section top">
@@ -253,6 +334,10 @@ export default class Encounters extends React.Component {
                 handleChange={this.handleChange}
                 handleDelete={this.handleDelete}
                 handleUndelete={this.handleUndelete}
+                handleSearchPatient={this.handleSearchPatient}
+                searchedPatients={this.state.searchedPatients}
+                changeVisits={this.changeVisits}
+                searchValue={this.state.searchValue}
               />
 
               <Providers

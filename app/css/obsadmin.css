@@ -326,4 +326,7 @@ a {
     margin: auto;
     margin-top: 3%;
 }
+#selectedPatient{
+    display: block;
+}
 

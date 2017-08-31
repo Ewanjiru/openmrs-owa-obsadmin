@@ -13,8 +13,17 @@ const Encounter = props => (
             value={props.patientName}
             required
             disabled={(props.editable === false)}
-            onChange={props.handleChange}
+            onChange={props.handleSearchPatient}
           />
+          {(props.editable === true && props.searchedPatients.length > 0) &&
+            <div className="dropdown-menu" id="selectedPatient">
+              {
+                props.searchedPatients.map((patient, index) => (
+                  <li className="dropdown-item" value={patient.uuid} key={index} onClick={() => props.changeVisits(patient.uuid, patient.display)}>{patient.display}</li>
+                ))
+              }
+            </div>
+          }
         </div>
       </div>
 
@@ -30,7 +39,7 @@ const Encounter = props => (
           >
             {
               props.location_array.map((location, key) => (
-                <option value={location.display}>{location.display}</option>
+                <option value={location.uuid}>{location.display}</option>
               ))
             }
           </select>
@@ -63,9 +72,10 @@ const Encounter = props => (
             disabled={(props.editable === false)}
             onChange={props.handleChange}
           >
+            <option value="" />
             {
               props.visit_array.map((visit, index) => (
-                <option key={index} value={visit.display}>{visit.display}</option>
+                <option key={index} value={visit.uuid}>{visit.display}</option>
               ))
             }
           </select>
@@ -147,7 +157,7 @@ const Encounter = props => (
           <button
             type="submit"
             name="update"
-            onClick={(props.editable) ? props.handleUpdate : props.handleEdit}
+            onClick={(props.editable) ? e => props.handleUpdate(e) : props.handleEdit}
             className="btn btn-default form-control"
           >
             {(props.editable) ? 'Update' : 'Edit'}</button>
