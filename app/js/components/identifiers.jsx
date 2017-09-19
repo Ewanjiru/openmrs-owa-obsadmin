@@ -38,7 +38,11 @@ export default class Identifiers extends React.Component {
         identifierType: '',
         location: '',
         preferred: false,
-      }
+        },
+      editErrors: { uuid: '',
+                    error: ''},
+      addErrors: { uuid: '',
+                  error: ''}
     };
     this.callEdit = this.callEdit.bind(this);
     this.callSave = this.callSave.bind(this);
@@ -49,10 +53,10 @@ export default class Identifiers extends React.Component {
     this.handleCreateChange = this.handleCreateChange.bind(this);
     this.handleDelete = this.handleDelete.bind(this);
     this.handlePreferred = this.handlePreferred.bind(this);
+    this.handleError = this.handleError.bind(this);
+    this.reload = this.reload.bind(this);
   }
-  /**
-   * On component mount, performs api calls.
-   */
+
   componentDidMount() {
     apiCall(null, 'get', `patient/${this.state.patient_uuid}/identifier?v=full`)
       .then((res) => {
@@ -74,9 +78,6 @@ export default class Identifiers extends React.Component {
       })
   }
 
-  /**
-   * reload component.
-   */
   reload() {
     apiCall(null, 'get', `patient/${this.state.patient_uuid}/identifier?v=full`)
       .then((res) => {
@@ -85,12 +86,7 @@ export default class Identifiers extends React.Component {
         }))
       })
   }
-  /**
-   *
-   * @param {*} isPreferred
-   * @param {*} identifier_uuid
-   *It handle change of the preferred identifier
-   */
+
   handlePreferred(isPreferred, identifier_uuid) {
     let new_editIdentifiers = Object.assign({}, this.state.editIdentifiers);
     if (!isPreferred) {
@@ -98,11 +94,7 @@ export default class Identifiers extends React.Component {
       this.setState({ editIdentifiers: new_editIdentifiers });
     }
   }
-  /**
-   *
-   * @param {*} e
-   *Handles chnage of input during edit
-   */
+
   handleChange(e, index) {
       e.preventDefault();
         const { name, value } = e.target;
@@ -113,11 +105,6 @@ export default class Identifiers extends React.Component {
         })
   }
 
-  /**
-   *
-   * @param {*} e
-   *handles input change during creating new identifier
-   */
   handleCreateChange(e) {
     const label = e.target.name;
     const value = e.target.value;
@@ -132,32 +119,23 @@ export default class Identifiers extends React.Component {
       addIdentifiers
     });
   }
-  /**
-   *
-   * @param {*} id
-   * @param {*} uuid
-   *sets to state currently active card
-   */
+
   callEdit(id, uuid) {
-    this.setState({ editState: true, active_card: id, identifier_uuid: uuid });
+    this.setState({ editState: true,
+        active_card: id,
+        identifier_uuid: uuid,
+        errors: {
+        edit: '',
+        add: ''
+    } });
   }
 
-  /**
-   * f
-   * @param {*} e
-   *Opens the new card
-   */
   callNew(e) {
     this.setState({ newState: true })
   }
 
-  /**
-   *
-   * @param {*} e
-   *creates new identifier
-   */
   callCreate(e) {
-    this.setState({ newState: false });
+    //this.setState({ newState: false });
     let keys = [];
     let values = [];
     let { addIdentifiers } = this.state;
@@ -177,10 +155,12 @@ export default class Identifiers extends React.Component {
             `patient/${this.state.patient_uuid}/identifier/${this.state.preffered_identifier_uuid}`
           )
             .then((response) => {
-              (response.error) ?
-                toastr.error(response.error.message)
-                :
-                toastr.success("Identifier Created Successfully.") && this.reload();
+                if(response.error){
+                   this.setState({addErrors: {error: response.error.message}})
+                   }
+                  else{
+                    this.setState({ newState: false });
+                    toastr.success("Identifier Created Successfully.") && this.reload();}
             })
             .catch(error => toastr.error(error))
         })
@@ -188,23 +168,23 @@ export default class Identifiers extends React.Component {
     } else {
       apiCall(new_addIdentifiers, 'post', `patient/${this.state.patient_uuid}/identifier`)
         .then((response) => {
-          (response.error) ?
-            toastr.error(response.error.message)
-            :
-            toastr.success("Identifier Created Successfully.") && this.reload();
+            if(response.error){
+               this.setState({addErrors: {error: response.error.message}})
+               }
+              else{
+                this.setState({ newState: false });
+                toastr.success("Identifier Created Successfully.") && this.reload();}
         })
         .catch(error => toastr.error(error));
     }
   }
 
-  /**
-   *
-   * @param {*} e
-   *called on save when editing an identifier
-   */
   callSave(e) {
-    this.setState({ editState: false })
+      this.setState({editErrors: {uuid: '',
+                                  error: ''}})
+
     let keys = [];
+    var error = false
     let values = [];
     let { editIdentifiers } = this.state;
     const returned_editIdentifiers = Object.keys(editIdentifiers).filter((key) => {
@@ -242,10 +222,15 @@ export default class Identifiers extends React.Component {
         `patient/${this.state.patient_uuid}/identifier/${this.state.identifier_uuid}`
       )
         .then((res) => {
-          (res.error) ?
-            toastr.error(res.error.message)
-            :
-            toastr.success("Identifier Updated Successfully.") && this.reload();
+          if(res.error){
+             error = true
+             this.setState({editErrors: {uuid: this.state.identifier_uuid,
+                                         error: res.error.message}})
+
+             }
+            else{
+            this.handleError()
+            toastr.success("Identifier Updated Successfully.") && this.reload();}
         })
         .catch(error => toastr.error(error))
     } else {
@@ -255,32 +240,31 @@ export default class Identifiers extends React.Component {
         `patient/${this.state.patient_uuid}/identifier/${this.state.identifier_uuid}`
       )
         .then((res) => {
-          (res.error) ?
-            toastr.error(res.error.message)
-            :
-            toastr.success("Identifier Updated Successfully.") && this.reload();
+            if(res.error){
+               error = true
+              this.setState({editErrors: {uuid: this.state.identifier_uuid,
+                                          error: res.error.message}})
+
+              }
+              else{
+              this.handleError()
+              toastr.success("Identifier Updated Successfully.") && this.reload();}
         })
         .catch(error => toastr.error(error))
-    }
-    this.setState({
-        editState: false,
-        active_card: '',
-      editIdentifiers: {
-        identifier: '',
-        identifierType: '',
-        location: '',
-        preferred: false,
-      }
-    })
+    };
   }
 
-  /**
-   *
-   * @param {*} uuid
-   * @param {*} voided
-   * @param {*} preferred
-   *handles delete of an idientifier
-   */
+  handleError(){
+        this.setState({
+                editState: false,
+                active_card: '',
+                editIdentifiers: {
+                                 identifier: '',
+                                 identifierType: '',
+                                 location: '',
+                                 preferred: false}
+          })
+}
   handleDelete(uuid, voided, preferred) {
     if ((uuid !== this.state.preffered_identifier_uuid) && voided === false) {
       apiCall(null, 'delete', `patient/${this.state.patient_uuid}/identifier/${uuid}?!purge`)
@@ -294,36 +278,45 @@ export default class Identifiers extends React.Component {
       toastr.error("Can not delete Preferred Identifier");
     }
   }
-  /**
-   *
-   * @param {*} e
-   *handels closing the card on cancel
-   */
+
   callCancel(e) {
     this.setState((prevState) => (
                     {   editState: false,
                         newState: false,
                         active_card: '',
                         identifier: prevState.identifier,
-                        identifierType: prevState.identifierType
+                        identifierType: prevState.identifierType,
+                        editErrors : {uuid: '',
+                                     error: ''},
+                         addErrors : {uuid: '',
+                                      error: ''}
                 }));
   }
 
   render() {
     const { editIdentifiers } = this.state;
+    var editErrorClass = '';
+    var addErrorClass = '';
+    var editError = ''
+    var addError = ''
+    if(this.state.editErrors.error.length > 0 ){
+        editErrorClass = 'has-error';
+        editError = this.state.editErrors.error
+    }
+    if(this.state.addErrors.error.length > 0 ){
+        addErrorClass = 'has-error';
+        addError = this.state.addErrors.error
+    }
     return (
       <div className="row">
         {
           this.state.identifiers_array.map((id, index) => {
             if (id.preferred) { this.state.preffered_identifier_uuid = id.uuid; }
-            /**
-             * displays the view identifier cards
-             */
             return (
               <div className="card1" id={index} key={index}>
                 <div className="card-header"> <h4>Identifier {id.identifier}</h4></div>
                 <div className="card-body">
-                  <div>
+                  <div className={this.state.editErrors.uuid === id.uuid ? editErrorClass : ''}>
                     <h6><b>Identifier</b></h6>
                     <input
                       className="form-control"
@@ -332,6 +325,8 @@ export default class Identifiers extends React.Component {
                       value={this.state.active_card !== index ? id.identifier : editIdentifiers.identifier || id.identifier}
                       onChange={(e)=>this.handleChange(e,index)}
                       disabled={!this.editState && (this.state.active_card !== index) ? "disabled" : null}/>
+                    {this.state.editErrors.uuid === id.uuid &&
+                        <div className='input'>{editError}</div>}
                   </div>
                   {this.state.editState && this.state.active_card == index &&
                     <div>
@@ -342,7 +337,6 @@ export default class Identifiers extends React.Component {
                           name="identifierType"
                           value={editIdentifiers.identifierType || id.identifierType.display}
                           onChange={(e)=>this.handleChange(e,index)}>
-
                           {
                             this.state.identifierstypes_array.map((id_type) => (
                               <option value={id_type.display}>{id_type.display}</option>
@@ -421,9 +415,7 @@ export default class Identifiers extends React.Component {
               </div>
             )
           })
-          /**
-           * displays the create new identifierreact-bootstrap card
-           */
+
         }
         <div className="card1" id="add-card">
           <div className="card-header" >
@@ -440,6 +432,7 @@ export default class Identifiers extends React.Component {
           <div className="card-body">
             {this.state.newState &&
               <div>
+              <div className={addError.includes('identifier,')||!(addError.includes('identifierType')|| addError.includes('Location'))? addErrorClass : ''}>
                 <h6><b>Identifier</b></h6>
                 <input
                   type="text"
@@ -447,6 +440,9 @@ export default class Identifiers extends React.Component {
                   name="identifier"
                   defaultValue={this.state.addIdentifiers.id} onChange={this.handleCreateChange}
                 />
+                {(addError.includes('identifier,')||!(addError.includes('identifierType')|| addError.includes('Location'))) && <div className='input'>{addError}</div> }
+                </div>
+                <div className={addError.includes("identifierType")? addErrorClass : ''}>
                 <h6><b>Identifier Type</b></h6>
                 <select
                   className="form-control"
@@ -461,6 +457,10 @@ export default class Identifiers extends React.Component {
                     ))
                   }
                 </select>
+
+                {addError.includes("identifierType") && <div className='input'>{addError}</div> }
+                </div>
+                <div className={addError.includes("Location")? addErrorClass : ''}>
                 <h6><b>Location</b></h6>
                 <select
                   className="form-control"
@@ -475,6 +475,8 @@ export default class Identifiers extends React.Component {
                     ))
                   }
                 </select>
+                {addError.includes("Location") && <div className='input'>{addError}</div> }
+                </div>
                 <div className="arrange-horizontally">
                 <h6><b>Preferred  :</b></h6> <t />
                 <input
